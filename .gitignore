@@ -1,0 +1,15 @@
+# Environment variables (Crucial for security)
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+.env/
+
+# IDEs
+.vscode/
+.idea/
