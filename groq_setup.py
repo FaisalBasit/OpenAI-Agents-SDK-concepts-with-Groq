@@ -45,7 +45,15 @@ GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 #   "llama-3.3-70b-versatile"   <- Powerful, good for most tasks
 #   "llama3-8b-8192"            <- Faster, lighter
 #   "mixtral-8x7b-32768"        <- Great at reasoning
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "llama-3.1-8b-instant"
+
+# ── Tool-calling Guardrail ───────────────────────────────────
+# Use this in your Agent's instructions if you see formatting errors.
+JSON_TOOL_INSTRUCTIONS = (
+    "\nCRITICAL: When calling tools, you MUST use the standard tool-calling format. "
+    "Do NOT use XML tags like <function=...> or <tool_call=...>. "
+    "Only use the native tool calling capability provided by the API."
+)
 
 # ── Create the Groq client ────────────────────────────────────
 groq_client = AsyncOpenAI(

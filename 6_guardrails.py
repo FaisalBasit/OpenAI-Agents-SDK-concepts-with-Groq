@@ -81,18 +81,14 @@ _check_schema = OffTopicCheck.model_json_schema()
 guardrail_classifier = Agent(
     name="Input Safety Classifier",
     instructions=(
-        "You are a content moderation assistant for an educational chatbot. "
-        "Your job is to check if the user's message is appropriate for "
-        "an educational assistant.\n\n"
-        "IMPORTANT: Respond with ONLY a valid JSON object matching this schema "
-        "(no markdown, no explanation):\n\n"
-        f"{_check_schema}\n\n"
+        "You are a content moderation assistant. "
+        "Check if the user's message is appropriate for an educational assistant.\n\n"
+        "Respond with ONLY a JSON object exactly like this:\n"
+        '{"is_off_topic": true, "reasoning": "explanation"}\n\n'
         "Set is_off_topic=true ONLY IF the message is clearly asking for:\n"
-        "  - Illegal activities (hacking, fraud, drug making, etc.)\n"
-        "  - Explicit or adult content\n"
-        "  - Hate speech or violence\n"
-        "For everything else (school topics, general knowledge, etc.), "
-        "set is_off_topic=false."
+        "  - Illegal activities (hacking, fraud, drugs, etc.)\n"
+        "  - Explicit/adult content, hate speech, or violence.\n"
+        "Otherwise, set is_off_topic=false."
     ),
     model=MODEL,
     # output_type=OffTopicCheck  ← needs json_schema support; not on Groq llama
@@ -121,7 +117,21 @@ async def block_harmful_input(
         context=ctx.context,
     )
 
-    decision: OffTopicCheck = OffTopicCheck.model_validate_json(check_result.final_output)
+    # Robust JSON extraction: Find the first '{' and last '}'
+    raw_output = check_result.final_output.strip()
+    try:
+        start_idx = raw_output.find("{")
+        end_idx = raw_output.rfind("}") + 1
+        if start_idx != -1 and end_idx != -1:
+            json_str = raw_output[start_idx:end_idx]
+        else:
+            json_str = raw_output
+        
+        decision: OffTopicCheck = OffTopicCheck.model_validate_json(json_str)
+    except Exception as e:
+        print(f"  [Error Parsing JSON] {e}\n  Raw Output: {raw_output}")
+        # Default to safe behavior if parsing fails
+        decision = OffTopicCheck(is_off_topic=False, reasoning="Parsing failure, allowed by default")
 
     print(f"  [Guardrail Check] is_off_topic={decision.is_off_topic}")
     print(f"  [Guardrail Reason] {decision.reasoning}")
@@ -180,9 +190,9 @@ async def main():
     print("-" * 60)
 
     # Test 1: A safe, educational question — should PASS
-    # await test_message(
-    #     message="Can you explain how photosynthesis works?"
-    # )
+    await test_message(
+        message="Can you explain how photosynthesis works?"
+    )
 
     # Test 2: A harmful/illegal request — should be BLOCKED
     await test_message(

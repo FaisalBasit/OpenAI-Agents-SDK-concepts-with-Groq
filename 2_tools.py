@@ -27,7 +27,7 @@
 
 import asyncio
 import groq_setup  # noqa: F401
-from groq_setup import MODEL
+from groq_setup import MODEL, JSON_TOOL_INSTRUCTIONS
 from agents import Agent, Runner, function_tool
 
 
@@ -56,7 +56,12 @@ def get_weather(city: str) -> str:
 weather_assistant = Agent(
     name="Weather Assistant",
     instructions=(
-        "You are a helpful assistant that answers questions about weather. "
+        "You are a weather specialist. use weather tool for weather related questions "
+        "DIAGNOSTIC: You possess a REAL-TIME tool named `get_weather`. "
+        "COMMAND: You MUST call `get_weather` for ANY city requested. "
+        "DO NOT apologize. DO NOT say you lack real-time data. "
+        "DO NOT explain your limitations. Just call the tool and report the result."
+        + JSON_TOOL_INSTRUCTIONS
     ),
     model=MODEL,
     tools=[get_weather],   # <-- only weather tool

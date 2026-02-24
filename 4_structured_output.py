@@ -38,7 +38,7 @@
 import asyncio
 
 import groq_setup  # noqa: F401
-from groq_setup import MODEL
+from groq_setup import MODEL, JSON_TOOL_INSTRUCTIONS
 
 from agents import Agent, Runner
 from pydantic import BaseModel, Field
@@ -80,12 +80,12 @@ _schema_str = MovieInfo.model_json_schema()
 movie_extractor = Agent(
     name="Movie Info Extractor",
     instructions=(
-        "You are a movie database assistant. When given any description "
-        "or mention of a movie, extract all the relevant information.\n\n"
-        "IMPORTANT: Respond with ONLY a valid JSON object that matches "
-        "this exact schema — no markdown, no explanation, just JSON:\n\n"
-        f"{_schema_str}\n\n"
-        "If you are unsure of a detail, make a reasonable educated guess."
+        "You are a movie database assistant. Extract movie information into a JSON object.\n\n"
+        "Respond with ONLY a JSON object like this example:\n"
+        '{\n  "title": "Movie Name",\n  "director": "Director Name",\n  "year": 2024,\n  "genre": ["Action", "Drama"],\n  "main_actors": ["Actor 1", "Actor 2"],\n  "plot_summary": "Short summary.",\n  "rating_out_of_10": 8.5\n}\n\n'
+        "Use this schema as reference:\n"
+        f"{_schema_str}\n"
+        + JSON_TOOL_INSTRUCTIONS
     ),
     model=MODEL,
     # output_type=MovieInfo  ← would need json_schema support; not on Groq llama
@@ -114,8 +114,22 @@ async def main():
 
     # result.final_output is a plain string (JSON text from the model).
     # We validate+parse it into a MovieInfo Pydantic object ourselves.
-    raw_json: str = result.final_output
-    movie: MovieInfo = MovieInfo.model_validate_json(raw_json)
+    raw_output: str = result.final_output.strip()
+
+    # Robust JSON extraction: Find the first '{' and last '}'
+    try:
+        start_idx = raw_output.find("{")
+        end_idx = raw_output.rfind("}") + 1
+        if start_idx != -1 and end_idx != -1:
+            json_str = raw_output[start_idx:end_idx]
+        else:
+            json_str = raw_output
+        
+        movie: MovieInfo = MovieInfo.model_validate_json(json_str)
+    except Exception as e:
+        print(f"  [Error Parsing JSON] {e}\n  Raw Output: {raw_output}")
+        # Create a dummy object or raise
+        raise e
 
     # We can access each field individually like a Python object
     print("[Extracted Structured Data]")
