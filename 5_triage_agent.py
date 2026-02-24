@@ -44,6 +44,10 @@ import groq_setup  # noqa: F401
 from groq_setup import MODEL
 
 from agents import Agent, Runner
+import agents.strict_schema as _strict_schema
+
+# Groq rejects the default empty handoff schema — patch it to a compatible form
+_strict_schema._EMPTY_SCHEMA = {"type": "object", "properties": {}, "additionalProperties": False}
 
 
 # ── Specialist 1: Career Advisor ──────────────────────────────
@@ -101,9 +105,8 @@ triage_agent = Agent(
 
 
 # ── Helper to run one test ─────────────────────────────────────
-async def test(question: str, expected_specialist: str):
+async def test(question: str):
     print(f"\n[Question]  : {question}")
-    print(f"[Expected]  : Should go to → {expected_specialist}")
 
     result = await Runner.run(
         starting_agent=triage_agent,  # Always start with the triage agent
@@ -123,23 +126,20 @@ async def main():
     print("One entry point → Many experts behind the scenes.\n")
     print("Testing with 3 different question types:\n")
 
-    # Test 1: Should route to Career Advisor
-    await test(
-        "I have 5 years of experience in sales but want to move into project management. How do I start?",
-        "Career Advisor"
-    )
+    # # Test 1: Should route to Career Advisor
+    # await test(
+    #     "I have 5 years of experience in sales but want to move into project management. How do I start?"
+    # )
 
     # Test 2: Should route to Finance Advisor
     await test(
-        "I earn 80,000 PKR per month. How much should I save and where should I invest?",
-        "Finance Advisor"
+        "I earn 80,000 PKR per month. How much should I save and where should I invest?"
     )
 
-    # Test 3: Should route to Tech Support
-    await test(
-        "My Python script keeps crashing with a RecursionError. What does that mean?",
-        "Tech Support"
-    )
+    # # Test 3: Should route to Tech Support
+    # await test(
+    #     "My Python script keeps crashing with a RecursionError. What does that mean?"
+    # )
 
     print("\n" + "=" * 60)
 

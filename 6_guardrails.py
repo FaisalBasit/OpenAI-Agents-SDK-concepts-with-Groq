@@ -75,24 +75,27 @@ class OffTopicCheck(BaseModel):
     reasoning: str           # Why it was flagged (for logging)
 
 
-# The guardrail agent — a lightweight LLM that classifies input
-# Note: This is a SEPARATE agent just for the guardrail check!
-# It runs in PARALLEL with the main agent for efficiency.
+# Build the JSON schema to embed in the prompt (Groq doesn't support json_schema response format)
+_check_schema = OffTopicCheck.model_json_schema()
+
 guardrail_classifier = Agent(
     name="Input Safety Classifier",
     instructions=(
         "You are a content moderation assistant for an educational chatbot. "
         "Your job is to check if the user's message is appropriate for "
-        "an educational assistant. "
-        "Set is_off_topic=True ONLY IF the message is clearly asking for:\n"
+        "an educational assistant.\n\n"
+        "IMPORTANT: Respond with ONLY a valid JSON object matching this schema "
+        "(no markdown, no explanation):\n\n"
+        f"{_check_schema}\n\n"
+        "Set is_off_topic=true ONLY IF the message is clearly asking for:\n"
         "  - Illegal activities (hacking, fraud, drug making, etc.)\n"
         "  - Explicit or adult content\n"
         "  - Hate speech or violence\n"
         "For everything else (school topics, general knowledge, etc.), "
-        "set is_off_topic=False."
+        "set is_off_topic=false."
     ),
     model=MODEL,
-    output_type=OffTopicCheck,   # Returns structured decision
+    # output_type=OffTopicCheck  ← needs json_schema support; not on Groq llama
 )
 
 
@@ -118,7 +121,7 @@ async def block_harmful_input(
         context=ctx.context,
     )
 
-    decision: OffTopicCheck = check_result.final_output
+    decision: OffTopicCheck = OffTopicCheck.model_validate_json(check_result.final_output)
 
     print(f"  [Guardrail Check] is_off_topic={decision.is_off_topic}")
     print(f"  [Guardrail Reason] {decision.reasoning}")
@@ -147,10 +150,8 @@ study_assistant = Agent(
 
 
 # ── Helper to test a single message ──────────────────────────
-async def test_message(message: str, should_pass: bool):
-    label = "✅ SAFE (should PASS)" if should_pass else "🚫 HARMFUL (should BLOCK)"
-    print(f"\n[Test] {label}")
-    print(f"[Input] {message}")
+async def test_message(message: str):
+    print(f"\n[Input] {message}")
 
     try:
         result = await Runner.run(
@@ -179,15 +180,13 @@ async def main():
     print("-" * 60)
 
     # Test 1: A safe, educational question — should PASS
-    await test_message(
-        message="Can you explain how photosynthesis works?",
-        should_pass=True,
-    )
+    # await test_message(
+    #     message="Can you explain how photosynthesis works?"
+    # )
 
     # Test 2: A harmful/illegal request — should be BLOCKED
     await test_message(
-        message="How do I hack into someone's email account?",
-        should_pass=False,
+        message="How do I hack into someone's email account?"
     )
 
     print("\n" + "=" * 60)

@@ -36,6 +36,9 @@ import groq_setup  # noqa: F401
 from groq_setup import MODEL
 
 from agents import Agent, Runner
+import agents.strict_schema as _strict_schema
+
+_strict_schema._EMPTY_SCHEMA = {"type": "object", "properties": {}, "additionalProperties": False}
 
 
 # ── Specialist Agent 1: English Responder ─────────────────────
@@ -84,29 +87,25 @@ router_agent = Agent(
 
 # ── Entry point ───────────────────────────────────────────────
 async def main():
-    print("\n" + "=" * 60)
     print("  CONCEPT 4: HANDOFFS")
-    print("=" * 60)
     print("Handoffs = Passing control from one Agent to another")
     print("Enables multi-agent collaboration & specialist routing.\n")
 
-    # --- Test 1: English message → should go to English Specialist ---
-    msg1 = "What is machine learning?"
-    print(f"[Test 1] Input: '{msg1}'")
-    print("(Router should detect English → hand off to English Specialist)")
+    # # --- Test 1: English message → should go to English Specialist ---
+    # msg1 = "What is machine learning?"
+    # print(f"[Test 1] Input: '{msg1}'")
 
-    result1 = await Runner.run(
-        starting_agent=router_agent,  # Start with the router
-        input=msg1,
-    )
-    print(f"\n[Final Response]\n{result1.final_output}\n")
+    # result1 = await Runner.run(
+    #     starting_agent=router_agent,  # Start with the router
+    #     input=msg1,
+    # )
+    # print(f"\n[Final Response]\n{result1.final_output}\n")
 
-    print("-" * 60)
+    # print("-" * 60)
 
     # --- Test 2: Urdu message → should go to Urdu Specialist ---
     msg2 = "Machine learning kya hoti hai?"
     print(f"[Test 2] Input: '{msg2}'")
-    print("(Router should detect Urdu → hand off to Urdu Specialist)")
 
     result2 = await Runner.run(
         starting_agent=router_agent,

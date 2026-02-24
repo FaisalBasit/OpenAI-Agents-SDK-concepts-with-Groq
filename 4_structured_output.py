@@ -72,27 +72,29 @@ class MovieInfo(BaseModel):
     )
 
 
-# ── Step 2: Create an Agent with output_type set ──────────────
-# When output_type is specified, the SDK instructs the LLM to
-# return JSON that matches the Pydantic model's schema.
+# ── Step 2: Create an Agent with JSON-in-prompt approach ────────
+
+# Build the JSON schema string to embed in the prompt
+_schema_str = MovieInfo.model_json_schema()
+
 movie_extractor = Agent(
     name="Movie Info Extractor",
     instructions=(
         "You are a movie database assistant. When given any description "
-        "or mention of a movie, extract all the relevant information "
-        "and return it in the structured format requested. "
+        "or mention of a movie, extract all the relevant information.\n\n"
+        "IMPORTANT: Respond with ONLY a valid JSON object that matches "
+        "this exact schema — no markdown, no explanation, just JSON:\n\n"
+        f"{_schema_str}\n\n"
         "If you are unsure of a detail, make a reasonable educated guess."
     ),
     model=MODEL,
-    output_type=MovieInfo,   # <-- THIS is the key line for structured output
+    # output_type=MovieInfo  ← would need json_schema support; not on Groq llama
 )
 
 
 # ── Entry point ───────────────────────────────────────────────
 async def main():
-    print("\n" + "=" * 60)
     print("  CONCEPT 5: STRUCTURED OUTPUT")
-    print("=" * 60)
     print("Structured Output = Agent returns a typed Python object")
     print("instead of unstructured text. Powered by Pydantic.\n")
 
@@ -110,8 +112,10 @@ async def main():
         input=user_input,
     )
 
-    # result.final_output is now a MovieInfo object — NOT a plain string!
-    movie: MovieInfo = result.final_output
+    # result.final_output is a plain string (JSON text from the model).
+    # We validate+parse it into a MovieInfo Pydantic object ourselves.
+    raw_json: str = result.final_output
+    movie: MovieInfo = MovieInfo.model_validate_json(raw_json)
 
     # We can access each field individually like a Python object
     print("[Extracted Structured Data]")

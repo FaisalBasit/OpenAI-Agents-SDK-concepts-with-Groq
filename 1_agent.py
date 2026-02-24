@@ -25,9 +25,8 @@
 # =============================================================
 
 import asyncio
-
 # Import our shared Groq configuration (sets up the LLM client)
-import groq_setup  # noqa: F401  (side-effect import — configures Groq)
+import groq_setup 
 from groq_setup import MODEL
 
 # Import the two core classes from the OpenAI Agents SDK
@@ -53,15 +52,11 @@ explainer_agent = Agent(
 # to the agent and waits for the LLM's response.
 # It is an ASYNC function, so we wrap it in asyncio.run().
 async def main():
-    print("\n" + "=" * 60)
-    print("  CONCEPT 1: AGENT")
-    print("=" * 60)
     print("An Agent = LLM + Instructions + a Task to do\n")
 
     topic = "What is an API?"  # The message we send to the agent
 
     print(f"[User]  → {topic}")
-    print("[Agent] → Thinking...\n")
 
     # Runner.run() sends the message to the agent and returns a result
     result = await Runner.run(
@@ -71,7 +66,6 @@ async def main():
 
     # result.final_output contains the agent's text response
     print(f"[Agent Response]\n{result.final_output}")
-    print("\n" + "=" * 60)
 
 
 # ── Entry point ───────────────────────────────────────────────
